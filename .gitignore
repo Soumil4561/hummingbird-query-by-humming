@@ -161,3 +161,10 @@ cython_debug/
 
 idea.log
 userinput
+test_dataset
+index_dataset
+user_input
+query_samples
+results.txt
+song.wav
+input.mid

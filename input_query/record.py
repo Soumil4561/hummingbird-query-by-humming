@@ -1,16 +1,16 @@
 import pyaudio
 import wave
-import time
+from time import time as time
 import os
 
-def RecordQuery(time):
+def RecordQuery(duration):
     
     # Audio settings
     sample_format = pyaudio.paInt16
     channels = 1  # Mono audio input
     sample_rate = 44100  # Standard sample rate (Hz)
     chunk_size = 1024  # Size of each audio chunk
-    record_duration = time  # Duration to record in seconds
+    record_duration = duration  # Duration to record in seconds
     
     # Initialize PyAudio
     p = pyaudio.PyAudio()
@@ -28,8 +28,8 @@ def RecordQuery(time):
     print("Recording...")
 
     # Record audio for the specified duration
-    start_time = time.time()
-    while (time.time() - start_time) < record_duration:
+    start_time = time()
+    while (time() - start_time) < record_duration:
         data = stream.read(chunk_size)
         frames.append(data)
 
