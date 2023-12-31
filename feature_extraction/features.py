@@ -16,6 +16,13 @@ def extract_absolute_pitch(filename):
     for note in midi_data.instruments[0].notes:
         pitches.append(note.pitch)
     
+    #get average of the pitches
+    average_pitch = np.mean(pitches)
+    
+    #subtract the average pitch from all the pitches
+    for i in range(len(pitches)):
+        pitches[i] = pitches[i] - average_pitch
+        
     return pitches
 
 def extract_relative_pitch(absolute_pitch):
@@ -26,7 +33,7 @@ def extract_relative_pitch(absolute_pitch):
 
 def extract_tempo(filename):
     pm = pretty_midi.PrettyMIDI("user_input/input.mid")
-    tempo = pm.get_tempo_changes()
+    tempo = pm.estimate_tempo()
     return tempo
     
 

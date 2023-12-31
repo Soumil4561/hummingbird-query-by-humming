@@ -3,8 +3,9 @@ import pretty_midi
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
 from elastic import elastic_connect as elastic_connect
+import numpy as np
 
-def create_index(es):
+def midi_create_index(es):
     load_dotenv()
     mapping = {
                 "mappings": {
@@ -23,7 +24,29 @@ def create_index(es):
         es.indices.delete(index=ES_INDEX)
 
     es.indices.create(index=ES_INDEX, body=mapping, ignore=400)
+
+def ts_create_index(es,name):
+    #given a time series, create an index for it
     
+    ES_INDEX = name
+    
+    mappings = {
+        "mappings": {
+            "properties": {
+                "paa_ts": {
+                    "type": "dense vector",
+                    "dims": 16,
+                    "similarity": "cosine"
+                },
+                'name': { 'type': 'text' }
+            }
+        }
+    }
+    if(es.indices.exists(index=ES_INDEX)):
+        es.indices.delete(index=ES_INDEX)
+    
+    es.indices.create(index=ES_INDEX,body=mappings,ignore=400)
+
 def index():
     #1. Main module asks for query input
     #2. Gives query to feature extraction module
@@ -50,46 +73,13 @@ def index():
     es = elastic_connect()
             
     #create index
-    create_index(es)
+    midi_create_index(es)
     
     for song in os.listdir("test_dataset"):
         #given song is in midi format
         print(song)
         if song.endswith(".mid"):
             mid_data = pretty_midi.PrettyMIDI("test_dataset/" + song)
-            
-            
-            
-                    
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
             # pitch_vector = []
             # for notes in mid_data.instruments[0].notes:
             #     pitch_vector.append(notes.pitch)
@@ -121,7 +111,39 @@ def index():
             #     'paa_relative': paa_relative
             # })
 
-def index_text():
+def index_elastic():
+
+    es = elastic_connect()
+    
+    #create index
+    ts_create_index(es,"adiac_16")    
+    
+    f = open("test_dataset/UCR/Adiac/Adiac_TEST", "r" )
+    data = f.read()
+    
+    data = data.split("\n")
+    
+    for i in range(0, len(data)):
+        line = data[i].split(",")
+        # convert to float
+        if (line == ['']):
+            continue
+        for i in range(0, len(line)):
+            line[i] = float(line[i])
+        
+        #remove the first element
+        line = line[1:]
+
+        paa_line = paa(line, 16)
+            
+        es.index(index="adiac_16", body={
+            'paa_ts': paa_line,
+            'name': str(i)
+        })
+        
+    f.close()
+
+def midi_index_text():
     for filename in os.listdir("test_dataset/dataset_beetles"):
         try:
             midi_data = pretty_midi.PrettyMIDI("test_dataset/dataset_beetles/" + filename)
@@ -132,8 +154,10 @@ def index_text():
         song_duration = midi_data.get_end_time()
         
         segment_duration = 15
-        
-        f = open('index_dataset/' + filename + '.txt', 'w')
+        tempo = midi_data.estimate_tempo()
+        f = open('index_dataset/index_beetles/rel/' + filename + '.txt', 'w')
+        # f.write(str(tempo))
+        # f.close()
         
         for i in range(0, int(song_duration) - segment_duration):
             prev = 1
@@ -142,11 +166,72 @@ def index_text():
                 if note.start > i and note.end < i + segment_duration:
                     # relative pitches should be written
                     f.write(str(note.pitch - midi_data.instruments[0].notes[j - 1].pitch) + " ")
-                    # f.write(str(abs(note.pitch)) + " ")
+                    #f.write(str(abs(note.pitch)) + " ")
             f.write("\n")
             prev = j + 1
 
         f.close()
+
+def ts_index_text():
+    
+    for dataset in os.listdir("test_dataset/UCR"):
+        f = open("test_dataset/UCR/" + dataset + "/" + dataset+"_TEST", "r")
+        content = f.read()
+        content = content.split("\n")
+        content.pop()
+
+        content = content[0].split(",")
+        for i in range(len(content)):
+            content[i] = float(content[i])
+            
+        content = content[1:]
+        
+        #find paa of the line
+        line_lower, line_upper = envelopes(content, 5)
+        
+        try:
+            paa_lower = paa(line_lower, 4)
+            paa_upper = paa(line_upper, 4)
+            paa_line = paa(content, 4)
+        
+        except:
+            continue
+        
+        f1 = open("index_dataset/UCR" + "/" + dataset + ".txt", "w")
+        f1.write(str(paa_lower) + "\n")
+        f1.write(str(paa_upper) + "\n")
+        f1.write(str(paa_line) + "\n")
+        
+        f1.close()
+        f.close()
+ 
+
+    # for idx in range(0, len(content)):
+    #     line = content[idx].split(",")
+    #     # convert to float
+    #     if line == ['']:
+    #         continue
+    #     for i in range(0, len(line)):
+    #         line[i] = float(line[i])
+
+    #     # remove the first element
+    #     line = line[1:]
+
+    #     # find paa of the line
+    #     line_lower, line_upper = envelopes(line, 5)
+
+    #     paa_lower = paa(line_lower, 4)
+    #     paa_upper = paa(line_upper, 4)
+    #     paa_line = paa(line, 4)
+
+    #     f1 = open("index_dataset/UCR/Adiac/" + str(idx) + ".txt", "w")
+    #     f1.write(str(paa_lower) + "\n")
+    #     f1.write(str(paa_upper) + "\n")
+    #     f1.write(str(paa_line) + "\n")
+    #     f1.close()
+
+    # f.close()
+
         
 #Lower-bounding technique and indexing scheme
 def envelopes(X, k):
@@ -189,4 +274,25 @@ def paa(X,m):
         
     return paa
 
-#index_text()
+
+def search():
+    es = elastic_connect()
+    
+    query = {
+           "field": "paa_ts",
+            "query_vector": [0.0, 0.0, 0.0, 0.0],
+            "k": 5,
+            "num_candidates": 10
+        }
+    
+    results = es.knn_search(index="adiac_16", knn=query, source=True)
+    print(results['hits']['hits'])
+    
+#index_elastic()
+#search()
+
+es = elastic_connect()
+mapping = es.indices.get_mapping(index="adiac_16")
+print(mapping)
+
+

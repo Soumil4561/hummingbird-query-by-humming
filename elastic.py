@@ -14,7 +14,10 @@ def elastic_connect():
     es = Elasticsearch(
     "https://localhost:9200/",
     ca_certs="C:\Elastic\elasticsearch-8.11.1\config\certs\http_ca.crt",
-    basic_auth=("elastic", "XY8Pho=MUT4WceKkxV_R")
+    basic_auth=("elastic", "97BjknVWiAk_rzwZXqT5")
     )
-    
+
     return es
+
+es = elastic_connect()
+print(es.ping())

@@ -39,16 +39,18 @@ def ldtw_constraint(seq1,seq2, i,j ,k):
     else:
         return abs(seq1[i] - seq2[j])
     
-def ldtw(seq1, seq2, delta):
+def ldtw(seq1, seq2, delta, n):
     norm_seq1 = utw_norm(seq1, math.ceil(len(seq2)/len(seq1)))
     norm_seq2 = utw_norm(seq2, math.ceil(len(seq1)/len(seq2)))
+    #print(norm_seq2)
     # norm_seq1 = seq1
     # norm_seq2 = seq2   
     # l = math.lcm(len(seq1), len(seq2))
     # norm_seq1 = utw_norm(seq1, l)
     # norm_seq2 = utw_norm(seq2, l)
     
-    k = (delta * len(seq1) -1)/2
+    k = (delta * n -1)/2
+    k=2
     cost = np.zeros((len(norm_seq1), len(norm_seq2)))
     cost[0, 0] = ldtw_constraint(norm_seq1, norm_seq2, 0, 0, k)
     for i in range(1, len(norm_seq1)):
@@ -61,10 +63,10 @@ def ldtw(seq1, seq2, delta):
             cost[i, j] = min(cost[i - 1, j], cost[i, j - 1], cost[i - 1, j - 1]) + ldtw_constraint(norm_seq1, norm_seq2, i, j, k)
     
     #print the cost matrix
-    # for i in range(0, len(norm_seq1)):
-    #     for j in range(0, len(norm_seq2)):
-    #         print(cost[i,j], end = ' ')
-    #     print()
+    for i in range(0, len(norm_seq1)):
+        for j in range(0, len(norm_seq2)):
+            print(cost[i,j], end = ' ')
+        print()
     return cost[-1, -1]
     
 # def lb_Keogh(seq1,seq2,r):
@@ -95,14 +97,15 @@ def ldtw(seq1, seq2, delta):
         
                   
     
+seq1 = [1,2,3,4,5,6,7,8,9,10,11]  
+seq2 = [2,5,7,2,1,9]
     
-    
 
 
 
-# seq1 = [1, 2, 3, 4, 7]
-# seq2 = [2,4,7]
+# seq1 = [-0.36959595936170186, -0.6493831276595742, 0.47254715106383016]
+# seq2 = [-0.36959595936170186, -0.6493831276595742, 0.47254715106383016]
 
 # print("DTW distance: " ,dtw(seq1, seq2))
 # print("UTW Distance: " ,utw(seq1, seq2))
-# print("LDTW Distance: ",ldtw(seq1, seq2, 0.05))
+#print("LDTW Distance: ",ldtw(seq1, seq2, 0.1, 20))
